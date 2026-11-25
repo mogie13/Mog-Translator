@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Mog Translator</title>
+<meta name="description" content="Mog, Bengali and English dictionary, phrasebook and word-by-word translator that works offline.">
+<meta name="theme-color" content="#6b1626">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+/* VOICE everyday tool for a small community, calm and respectful
+   IDEA a pocket word-book from a Mog monastery school: robe maroon cover, saffron tabs
+   PICTURE the live translation card, Mog word large in the chosen script
+   COLOUR white ground, robe maroon, saffron accent, warm grey ink
+   TYPE system sans for UI + bundled Noto Sans Myanmar / Bengali for script
+   LAYOUT laptop: maroon header band, tabs, one centred 760px work column; phone: same column, tabs fixed at bottom */
+@font-face{font-family:"Noto Sans Myanmar";src:url(fonts/noto-sans-myanmar-myanmar-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+1000-109F,U+A9E0-A9FF,U+AA60-AA7F,U+200C-200D,U+25CC}
+@font-face{font-family:"Noto Sans Myanmar";src:url(fonts/noto-sans-myanmar-myanmar-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+1000-109F,U+A9E0-A9FF,U+AA60-AA7F,U+200C-200D,U+25CC}
+@font-face{font-family:"Noto Sans Bengali";src:url(fonts/noto-sans-bengali-bengali-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+200C-200D,U+25CC}
+@font-face{font-family:"Noto Sans Bengali";src:url(fonts/noto-sans-bengali-bengali-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+200C-200D,U+25CC}
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#16100f);
+--panel:light-dark(#faf6f2,#211816);
+--line:light-dark(#e6ddd5,#3a2c28);
+--ink:light-dark(#231a17,#f3ebe6);
+--quiet:light-dark(#6e5f58,#b9a8a0);
+--robe:light-dark(#6b1626,#8f2236);
+--robe-ink:#fff7ef;
+--saffron:light-dark(#e39a1c,#f0ac3a);
+--saffron-soft:light-dark(#fdf0da,#3a2a12);
+--good:light-dark(#2c6e49,#6cc38f);
+--warn:light-dark(#9a5b00,#f0b45a);
+--script:"Noto Sans Myanmar","Noto Sans Bengali",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--script);overflow-x:clip;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--robe)}
+:root[data-theme=dark] a{color:var(--saffron)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) a{color:var(--saffron)}}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(4vw,16px,env(safe-area-inset-left,0px));padding-right:max(4vw,16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--robe);color:var(--robe-ink);margin-top:calc(-1*env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 18px);padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.brand h1{margin:0;font-size:clamp(26px,5vw,34px);line-height:1.05;letter-spacing:-.02em;font-weight:700}
+.brand h1 small{display:block;font-size:14px;font-weight:400;letter-spacing:0;opacity:.85;margin-top:4px}
+.seg{display:inline-flex;background:rgba(255,255,255,.12);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--robe-ink);padding:8px 14px;border-radius:999px;min-height:40px;cursor:pointer;font-size:15px}
+.seg button[aria-pressed=true]{background:var(--saffron);color:#2b1700;font-weight:700}
+.tonebox{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:10px;opacity:.9}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;text-decoration:none;color:var(--quiet);font-size:12px;min-height:60px;justify-content:center}
+nav.tabs a svg{width:22px;height:22px}
+nav.tabs a[aria-current=page]{color:var(--robe);font-weight:700}
+:root[data-theme=dark] nav.tabs a[aria-current=page]{color:var(--saffron)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) nav.tabs a[aria-current=page]{color:var(--saffron)}}
+@media(min-width:760px){body{padding-bottom:0}nav.tabs{position:sticky;top:0;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}nav.tabs a{flex-direction:row;font-size:15px;min-height:52px}}
+main{padding-block:20px 32px}
+h2{font-size:22px;margin:0 0 12px;letter-spacing:-.01em}
+h3{font-size:17px;margin:20px 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.langs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;margin-bottom:10px}
+select,input[type=text],input[type=search],textarea{width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px;min-height:46px}
+textarea{min-height:96px;resize:vertical}
+select:focus,input:focus,textarea:focus{outline:2px solid var(--saffron);outline-offset:1px}
+.btn{display:inline-flex;align-items:center;text-decoration:none;color:var(--ink);border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 14px;min-height:44px;cursor:pointer;font-size:15px}
+.btn:hover{border-color:var(--saffron)}
+.btn.primary{background:var(--robe);border-color:var(--robe);color:var(--robe-ink);font-weight:700}
+.btn.small{min-height:36px;padding:6px 10px;font-size:14px}
+.iconbtn{border:0;background:transparent;cursor:pointer;padding:8px;min-width:44px;min-height:44px;border-radius:10px;color:var(--quiet)}
+.iconbtn[aria-pressed=true]{color:var(--saffron)}
+.preview{display:grid;gap:2px;margin-top:8px;font-size:15px;color:var(--quiet)}
+.preview b{color:var(--ink);font-weight:400}
+.result{margin-top:14px;border-left:5px solid var(--saffron);background:var(--saffron-soft);border-radius:0 14px 14px 0;padding:14px 16px}
+.result .out{font-size:clamp(22px,5vw,30px);line-height:1.35;word-break:break-word}
+.tier{font-size:13px;color:var(--quiet);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 10px;font-size:14px;cursor:pointer;text-decoration:none;color:var(--ink)}
+.chip.unknown{border-style:dashed;color:var(--quiet);cursor:default}
+.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.list li{border-bottom:1px solid var(--line)}
+.list a,.list .item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 4px;text-decoration:none;color:var(--ink)}
+.mogw{font-size:20px;font-weight:700}
+.gloss{color:var(--quiet);font-size:15px}
+.pos{font-size:13px;color:var(--quiet);align-self:center;white-space:nowrap}
+.entry-head{font-size:clamp(40px,10vw,64px);line-height:1.1;font-weight:700;margin:4px 0 6px;word-break:break-word}
+.scripts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:17px;margin:12px 0}
+.scripts dt{color:var(--quiet);font-size:14px;align-self:center}
+.scripts dd{margin:0}
+.tag{display:inline-block;font-size:12px;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px;background:var(--saffron-soft);color:var(--warn);font-family:system-ui,sans-serif}
+.tag.ok{color:var(--good)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.cat{display:block;padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--panel);text-decoration:none;color:var(--ink);min-height:84px}
+.cat b{display:block;font-size:17px}
+.cat span{font-size:14px;color:var(--quiet)}
+.empty{color:var(--quiet);padding:16px;border:1.5px dashed var(--line);border-radius:14px;text-align:center}
+.note{font-size:14px;color:var(--quiet)}
+.kbd{display:grid;gap:6px;margin-top:8px;padding:10px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.kbd .krow{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px}
+.kbd button{border:1px solid var(--line);background:var(--bg);border-radius:8px;min-height:46px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:2px}
+.kbd button small{font-size:12px;color:var(--quiet)}
+.kbd button:active{background:var(--saffron-soft)}
+.kbd .wide{grid-column:span 2}
+.field{display:grid;gap:4px;margin-bottom:12px}
+.field label{font-size:14px;font-weight:700}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:15px}
+.check input{width:20px;height:20px;margin-top:2px}
+.rec{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dot{width:12px;height:12px;border-radius:50%;background:#c0392b;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+.status{font-size:12px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.status.pending{background:var(--saffron-soft);color:var(--warn)}
+.status.approved{background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good)}
+.status.rejected{background:color-mix(in srgb,#c0392b 15%,transparent);color:#c0392b}
+.banner{font-size:14px;background:var(--saffron-soft);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:15px;z-index:9;max-width:90vw}
+details summary{cursor:pointer;color:var(--quiet);font-size:14px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Mog Translator<small>Mog · বাংলা · English, works offline</small></h1>
+      <div class="seg" role="group" aria-label="Show Mog in">
+        <button type="button" data-script="latn">Latin</button>
+        <button type="button" data-script="beng">বাংলা</button>
+        <button type="button" data-script="mymr">မြန်မာ</button>
+      </div>
+    </div>
+    <label class="tonebox"><input type="checkbox" id="tones"> Show tones in Latin (â high-falling, ǎ mid-rising, a᷅ low-rising)</label>
+  </div>
+</header>
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap">
+    <a href="#translate" data-tab="translate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h9M8 3v2m3 0c-1 4-4 7-7 8m3-4c1 2 3 3 5 4"/><path d="M13 21l4-9 4 9m-6.5-3h5"/></svg>Translate</a>
+    <a href="#dictionary" data-tab="dictionary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg>Dictionary</a>
+    <a href="#phrases" data-tab="phrases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z"/></svg>Phrases</a>
+    <a href="#saved" data-tab="saved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>Saved</a>
+    <a href="#contribute" data-tab="contribute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Contribute</a>
+  </div>
+</nav>
+<main class="wrap" id="view" aria-live="polite"></main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
