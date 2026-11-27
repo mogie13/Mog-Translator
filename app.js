@@ -554,6 +554,12 @@ addEventListener('hashchange', route);
 loadData().then(() => { syncHeader(); route(); }).catch(() => { view.innerHTML = '<p class="empty">Could not load the dictionary. Check your connection and reload once; after that it works offline.</p>'; });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => { /* not available in previews */ });
+  // When a new version takes over, reload once so the page isn't left running old code.
+  const hadWorker = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadWorker && !reloaded) { reloaded = true; location.reload(); }
+  });
+  navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => { /* not available in previews */ });
 }
 }
