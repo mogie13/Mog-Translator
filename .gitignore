@@ -1,2 +1,16 @@
 node_modules/
 .DS_Store
+
+# phone app builds
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+ios/build/
+ios/MogTranslator.xcodeproj/
+
+# contribution server data (never commit: accounts and contributions)
+server/*.db
+server/*.db-wal
+server/*.db-shm
+__pycache__/

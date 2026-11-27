@@ -1,4 +1,6 @@
 import { fromLatin, latinKey, detectScript, anyToLatin, normalizeLatin, TONES } from './translit.js';
+import { online, published, audioUrl, audioSrc } from './api.js';
+import { drawOnline } from './online.js';
 {
 // ---------- small helpers ----------
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -60,6 +62,8 @@ async function loadData() {
   const res = await fetch('data/lexicon.json');
   state.lex = await res.json();
   await refreshCommunity();
+  // fetch newly published words in the background; the cached list is used meanwhile
+  published.refresh().then((list) => list && refreshCommunity()).catch(() => { /* offline */ });
 }
 async function refreshCommunity() {
   const all = await idb.all();
@@ -68,6 +72,20 @@ async function refreshCommunity() {
     domains: c.category ? [c.category] : [], source: 'community', note: c.note || '', audio: c.audio || null,
     speaker: c.speaker || '', kind: c.kind,
   }));
+  // words reviewed and published on the contribution server (cached for offline use)
+  if (online()) {
+    const pub = published.cached();
+    state.community.push(...pub.filter((c) => c.mog && c.kind !== 'audio').map((c) => ({
+      id: 's-' + c.id, mog: normalizeLatin(c.mog), en: c.english || '', bn: c.bengali || '', pos: '',
+      domains: c.category ? [c.category] : [], source: 'server', note: '', audio: c.has_audio ? audioUrl(c.id) : null,
+      speaker: c.speaker || '', kind: c.kind,
+    })));
+    // published pronunciation recordings attach to the word they were recorded for
+    for (const c of pub.filter((x) => x.kind === 'audio' && x.has_audio && x.target)) {
+      const e = [...state.lex.entries, ...state.lex.phrases, ...state.community].find((x) => x.id === c.target);
+      if (e && !e.audio) { e.audio = audioUrl(c.id); if (c.speaker && !e.speaker) e.speaker = c.speaker; }
+    }
+  }
 }
 const entries = () => [...state.lex.entries, ...state.community.filter((c) => c.kind !== 'phrase')];
 const phrases = () => [...state.lex.phrases, ...state.community.filter((c) => c.kind === 'phrase')];
@@ -298,15 +316,20 @@ views.entry = (id) => {
   ${e.note ? `<p>${esc(e.note)}</p>` : ''}
   ${homographs.length ? `<p class="note">Same spelling, different word: ${homographs.map((h) => `<a href="#entry-${esc(h.id)}">${esc(h.en)}</a>`).join(', ')}. Tone tells them apart.</p>` : ''}
   <h3>Pronunciation</h3>
-  <div id="audio">${e.audio ? '<audio controls preload="none"></audio>' : `<p class="note">No recording yet.${e.source === 'iitg' || e.source === 'iitg+icphs' ? ` You can hear this word on the <a href="${esc(state.lex.sources.iitg.url)}" target="_blank" rel="noopener">IIT Guwahati database</a>.` : ''}</p>`}</div>
+  <div id="audio">${e.audio ? '<audio controls preload="none"></audio>' + (e.speaker ? `<p class="note">Spoken by ${esc(e.speaker)}</p>` : '') : `<p class="note">No recording yet.${e.source === 'iitg' || e.source === 'iitg+icphs' ? ` You can hear this word on the <a href="${esc(state.lex.sources.iitg.url)}" target="_blank" rel="noopener">IIT Guwahati database</a>.` : ''}</p>`}</div>
   <div class="row" style="margin-top:12px">
     <a class="btn" href="#contribute" id="rec">Record pronunciation</a>
     <a class="btn" href="#contribute" id="fix">Suggest a correction</a>
   </div>
   <h3>Source</h3>
-  <p class="note">${src ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.title)}</a>, ${esc(src.by)}.` : e.source === 'community' ? `Community contribution${e.speaker ? ', speaker ' + esc(e.speaker) : ''}, approved on this device.` : ''}
+  <p class="note">${src ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.title)}</a>, ${esc(src.by)}.` : e.source === 'community' ? `Community contribution${e.speaker ? ', speaker ' + esc(e.speaker) : ''}, approved on this device.` : e.source === 'server' ? 'Community contribution, reviewed and published by the Mog dictionary team.' : ''}
   English gloss as printed by the source. Bengali gloss and part of speech added for this prototype; please check.</p>`;
-  if (e.audio) { const a = $('#audio audio'); a.src = URL.createObjectURL(e.audio); }
+  if (e.audio) {
+    const a = $('#audio audio');
+    if (typeof e.audio !== 'string') a.src = URL.createObjectURL(e.audio);
+    else if (/^https?:/.test(e.audio)) audioSrc(e.audio).then((u) => { a.src = u; }).catch(() => { a.src = e.audio; });
+    else a.src = e.audio;
+  }
   $('#fav').onclick = () => { state.favs.has(e.id) ? state.favs.delete(e.id) : state.favs.add(e.id); store.set('favs', [...state.favs]); views.entry(id); };
   const prefill = (kind) => () => store.set('prefill', { kind, mog: fromLatin(e.mog, 'latn-precise'), en: e.en, bn: e.bn, target: e.id });
   $('#rec').onclick = prefill('audio'); $('#fix').onclick = prefill('correction');
@@ -405,6 +428,30 @@ views.contribute = async () => {
   $('#imp').onchange = importQueue;
   $('#modt').onchange = (e) => { store.set('moderator', e.target.checked); drawQueue(); };
   drawQueue();
+};
+
+// With a contribution server configured (api.js), Contribute sends there; the
+// on-phone flow above stays available for recordings and for working offline.
+const localContribute = views.contribute;
+views.contribute = async () => {
+  const pre = store.get('prefill', null);
+  if (online() && !store.get('contribLocal', false)) {
+    store.set('prefill', null);
+    await drawOnline({
+      view, $, esc, toast, mog, attachMogInput, anyToLatin, categories: state.lex.categories, prefill: pre,
+      drawRecorder, getRecording: () => recordedBlob, clearRecording: () => { recordedBlob = null; },
+      onPublished: () => published.refresh().then(refreshCommunity).catch(() => {}),
+      showLocal: () => { store.set('contribLocal', true); views.contribute(); },
+    });
+    return;
+  }
+  await localContribute();
+  if (online()) {
+    const bar = document.createElement('div'); bar.className = 'row'; bar.style.marginBottom = '12px';
+    bar.innerHTML = '<span class="note">Saving on this phone.</span><button class="btn small" type="button">Send to the dictionary server instead</button>';
+    bar.querySelector('button').onclick = () => { store.set('contribLocal', false); views.contribute(); };
+    view.querySelector('h2').after(bar);
+  }
 };
 
 function drawRecorder() {

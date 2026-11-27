@@ -29,8 +29,8 @@
   },
   {
    "id": "health",
-   "en": "Health and body",
-   "bn": "স্বাস্থ্য ও শরীর"
+   "en": "Health",
+   "bn": "স্বাস্থ্য"
   },
   {
    "id": "market",
@@ -61,6 +61,96 @@
    "id": "nature",
    "en": "Nature",
    "bn": "প্রকৃতি"
+  },
+  {
+   "id": "body",
+   "en": "Body",
+   "bn": "শরীর"
+  },
+  {
+   "id": "people",
+   "en": "People and pronouns",
+   "bn": "মানুষ ও সর্বনাম"
+  },
+  {
+   "id": "home",
+   "en": "Home and household",
+   "bn": "ঘর ও সংসার"
+  },
+  {
+   "id": "cooking",
+   "en": "Cooking and kitchen",
+   "bn": "রান্না ও রান্নাঘর"
+  },
+  {
+   "id": "clothing",
+   "en": "Clothing",
+   "bn": "পোশাক"
+  },
+  {
+   "id": "farming",
+   "en": "Farming and work",
+   "bn": "চাষ ও কাজ"
+  },
+  {
+   "id": "plants",
+   "en": "Plants and trees",
+   "bn": "গাছপালা"
+  },
+  {
+   "id": "weather",
+   "en": "Weather",
+   "bn": "আবহাওয়া"
+  },
+  {
+   "id": "time",
+   "en": "Time and days",
+   "bn": "সময় ও দিন"
+  },
+  {
+   "id": "colours",
+   "en": "Colours",
+   "bn": "রং"
+  },
+  {
+   "id": "places",
+   "en": "Places",
+   "bn": "জায়গা"
+  },
+  {
+   "id": "school",
+   "en": "School and learning",
+   "bn": "পড়াশোনা"
+  },
+  {
+   "id": "religion",
+   "en": "Religion and festivals",
+   "bn": "ধর্ম ও উৎসব"
+  },
+  {
+   "id": "feelings",
+   "en": "Feelings",
+   "bn": "অনুভূতি"
+  },
+  {
+   "id": "actions",
+   "en": "Actions (verbs)",
+   "bn": "কাজ (ক্রিয়া)"
+  },
+  {
+   "id": "describing",
+   "en": "Describing words",
+   "bn": "বিশেষণ"
+  },
+  {
+   "id": "questions",
+   "en": "Questions",
+   "bn": "প্রশ্ন"
+  },
+  {
+   "id": "other",
+   "en": "Other",
+   "bn": "অন্যান্য"
   }
  ],
  "entries": [

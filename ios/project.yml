@@ -1,0 +1,55 @@
+# XcodeGen spec for the Mog Translator iPhone/iPad app.
+# On a Mac: `./build-ios.sh --open` (installs XcodeGen with Homebrew if needed).
+# The web app in the repo root is copied into the app bundle at build time, so the
+# app and https://mogie13.github.io/Mog-Translator/ stay identical.
+name: MogTranslator
+options:
+  bundleIdPrefix: io.github.mogie13
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""   # set your Apple team ID here or in Xcode > Signing
+targets:
+  MogTranslator:
+    type: application
+    platform: iOS
+    sources:
+      - path: MogTranslator
+    preBuildScripts:
+      - name: Copy web app
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          WEB="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/www"
+          rm -rf "$WEB" && mkdir -p "$WEB"
+          cd "${PROJECT_DIR}/.."
+          cp index.html app.js api.js online.js translit.js manifest.webmanifest icon.svg "$WEB/"
+          cp -R data fonts "$WEB/"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.mogie13.mogtranslator
+        PRODUCT_NAME: Mog Translator
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_USER_SCRIPT_SANDBOXING: NO   # the copy step reads the repo root
+    info:
+      path: MogTranslator/Info.plist
+      properties:
+        CFBundleDisplayName: Mog Translator
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSMicrophoneUsageDescription: Record how a Mog word is said. Recordings stay on this device until you export them.
+        ITSAppUsesNonExemptEncryption: false

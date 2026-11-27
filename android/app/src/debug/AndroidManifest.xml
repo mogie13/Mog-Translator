@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: lets the app reach a test server on plain http:// (e.g. a laptop on
+     the same Wi-Fi). Release builds keep Android's default and need an https:// server. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:usesCleartextTraffic="true" />
+</manifest>
