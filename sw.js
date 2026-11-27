@@ -1,9 +1,9 @@
 // Offline-first service worker: the whole app (about 300 KB with fonts) is
 // cached on install, so dictionary, phrasebook and translation work with no
 // signal. Bump VERSION whenever any cached file changes.
-const VERSION = 'mog-v1';
+const VERSION = 'mog-v9';
 const FILES = [
-  './', 'index.html', 'app.js', 'translit.js', 'data/lexicon.json', 'manifest.webmanifest', 'icon.svg',
+  './', 'index.html', 'app.js', 'api.js', 'online.js', 'translit.js', 'data/lexicon.json', 'manifest.webmanifest', 'icon.svg',
   'fonts/noto-sans-myanmar-myanmar-400-normal.woff2', 'fonts/noto-sans-myanmar-myanmar-700-normal.woff2',
   'fonts/noto-sans-bengali-bengali-400-normal.woff2', 'fonts/noto-sans-bengali-bengali-700-normal.woff2',
 ];

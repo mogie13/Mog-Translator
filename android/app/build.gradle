@@ -1,0 +1,41 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The web app in the repo root is the single source: it is copied into the APK's
+// assets/www at build time, so the app and https://mogie13.github.io/Mog-Translator/ match.
+def webRoot = rootProject.file('..')
+def webOut = layout.buildDirectory.dir('generated/web')
+def syncWeb = tasks.register('syncWeb', Sync) {
+    from(webRoot) {
+        include 'index.html', 'app.js', 'api.js', 'online.js', 'translit.js', 'manifest.webmanifest', 'icon.svg', 'data/**', 'fonts/**'
+    }
+    into webOut.map { it.dir('www') }
+}
+
+android {
+    namespace 'io.github.mogie13.mogtranslator'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'io.github.mogie13.mogtranslator'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets {
+        main.assets.srcDir(webOut)
+    }
+}
+tasks.named('preBuild') { dependsOn syncWeb }
+// No third-party libraries: the app is the bundled web app in a WebView.

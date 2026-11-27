@@ -4,25 +4,118 @@ An offline-first web app (PWA) for Mog ⇄ Bengali ⇄ English: dictionary, phra
 word-by-word translation, script switching and a contribution and review flow.
 Design document: https://claude.ai/artifact/4nHHR3jrb6W7A55qfY5bBf
 
-## Run it
+## Open it on a phone
 
-No build step. Serve the folder with any static server, then open it in Chrome:
+The app is published at **https://mogie13.github.io/Mog-Translator/** by the GitHub
+Actions workflow on every push to `main`. That link works from any network, so the phone
+and laptop do not need to share WiFi. Open it in Chrome on Android and choose
+"Add to Home screen". After the first visit the whole app (about 280 KB including fonts)
+works with no connection.
+
+One-time setup: in the repository, Settings → Pages → Source must be set to
+**GitHub Actions**. Until then the deploy step fails with "Get Pages site failed".
+
+## Run it on a laptop
+
+No build step. Serve the folder with any static server:
 
 ```
 python3 -m http.server 8080      # then open http://localhost:8080
-npm test                         # transliteration tests (Node 20+)
+npm test                         # tests (Node 20+)
 ```
 
-On Android, open it in Chrome and choose "Add to Home screen". It is published at https://mogie13.github.io/Mog-Translator/ by the GitHub Actions workflow on every push to `main`. After the first visit the
-whole app (about 260 KB including fonts) works with no connection.
+If you see "Address already in use", an earlier server is still running: use another
+port (`python3 -m http.server 8090`) or stop the old one with Ctrl+C in its window.
+A laptop server is only reachable from devices on the same WiFi; use the GitHub Pages
+link above for everything else.
+
+## Phone apps (Android and iOS)
+
+`android/` and `ios/` wrap this same web app in a native shell. At build time they copy
+`index.html`, `app.js`, `translit.js`, `data/` and `fonts/` from the repo root, so the apps
+always match the website. Recording, import and export all work inside the apps.
+
+**Android APK** (JDK 17 and the Android SDK; see `android/build-apk.sh`):
+
+```
+cd android && ./build-apk.sh             # add --install to put it on a USB-connected phone
+# -> android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Or open the `android` folder in Android Studio and press Run. Exported files go to Downloads.
+
+**iOS** (needs a Mac with Xcode 15+):
+
+```
+cd ios && ./build-ios.sh --open          # installs XcodeGen via Homebrew, opens the project
+```
+
+In Xcode choose your Team under Signing & Capabilities, pick your iPhone and press Run.
+Exported files open the share sheet (Save to Files, WhatsApp, Mail).
+
+## Contribution server (accounts, roles, review)
+
+`server/server.py` is a small API (Python 3.10+, standard library and SQLite only). The
+server decides every permission; the app's buttons are only hints.
+
+| Role | Can |
+| --- | --- |
+| Owner (one) | Everything: appoint or remove admins, settings, transfer ownership. Nobody else can change or remove the owner. |
+| Admin | Approve, reject, edit, publish, unpublish; change reviewers and contributors only. |
+| Reviewer | Approve or reject pending suggestions (never their own). |
+| Contributor | Send suggestions; see the status and rejection reasons of their own logged ones. |
+
+- **Logged** suggestions are linked to the account. **Unlogged** ones store no account ID
+  (the database refuses one), keep only the date, and the server ignores any login sent
+  with them. Client addresses are never written to disk or logs; they are held in memory
+  for an hour only to rate-limit anonymous sending.
+- Flow: pending → approved or rejected (reason required) → published. Admins and the owner
+  can edit or unpublish later.
+- Every role change, review, edit, publish, unpublish, setting change and transfer goes to
+  an append-only audit log (database triggers block edits and deletes). It records who
+  acted, never who contributed.
+- Owner settings: allow anonymous suggestions, allow open sign-up.
+
+Run it:
+
+```
+cd server
+python3 server.py init-owner --name YOURNAME     # asks for a password; only works once
+python3 server.py serve --port 8787              # put it behind HTTPS (Caddy, nginx, or your host's)
+python3 -m unittest -v test_server               # tests
+```
+
+Then set `API_BASE` in `api.js` to the server's HTTPS address and rebuild or redeploy the
+app. With `API_BASE` empty the app works exactly as before. Options: `--db` (default
+`mog.db`), `--allow-origin` (default `*`; logins use tokens, not cookies), and
+`--trust-proxy` to rate-limit by `X-Forwarded-For` behind your own proxy. Back up the `.db` file.
+
+### Reaching the server from anywhere (ngrok, hosted on this computer)
+
+A free ngrok account gives one permanent address, so the app keeps working after Wi-Fi changes and restarts.
+
+1. Sign up at https://dashboard.ngrok.com/signup (free).
+2. Install ngrok: `sudo snap install ngrok`
+3. Connect it to your account: `ngrok config add-authtoken <token from dashboard.ngrok.com/get-started/your-authtoken>`
+4. Claim your free domain at https://dashboard.ngrok.com/domains (looks like `something.ngrok-free.dev`).
+5. Start the server and tunnel together, and leave the terminal open:
+   ```
+   cd server
+   ./start-public.sh something.ngrok-free.dev
+   ```
+6. Put `https://something.ngrok-free.dev` in `API_BASE` in `api.js` and rebuild the apps (or use **Contribute → Change server** in the app).
+
+The computer has to stay on and awake. The app sends the `ngrok-skip-browser-warning` header so ngrok's free-plan warning page doesn't get in the way.
 
 ## What is in it
 
 | File | What it does |
 | --- | --- |
 | `translit.js` | Transliteration engine. Phonemic Latin is the pivot; Bengali and Myanmar script are generated by rule, and both can be read back into Latin. |
-| `data/lexicon.json` | Seed dictionary: 41 words, every one from a cited source. |
+| `data/lexicon.json` | Seed dictionary (41 words, every one from a cited source), 18 phrasebook categories, and 183 English/Bengali phrase prompts waiting for Mog. |
 | `app.js` | The app: Translate, Dictionary, Phrases, Saved, Contribute. |
+| `api.js`, `online.js` | Connection to the contribution server, and the online Contribute screen (accounts, review, people and roles, settings, audit log). |
+| `server/` | The contribution server and its tests. |
 | `sw.js`, `manifest.webmanifest` | Offline cache and install. |
 | `fonts/` | Noto Sans Myanmar and Noto Sans Bengali (SIL Open Font License), so text renders the same on every phone. |
 | `test/` | Tests for the engine and the seed data. |
@@ -45,11 +138,13 @@ Tones are optional: `nga1` or `ngâ` (five), `nga2` or `ngǎ` (fish), `nga3` (I)
 - **Bengali glosses and parts of speech** were added by the developer; English glosses are
   as printed by the sources.
 - **No full-sentence translation.** Translation matches the phrasebook first, then goes word
-  by word. The source has no checked phrases yet, so the phrasebook lists words by category.
+  by word.
+- **Phrase prompts have no Mog yet.** They are English and Bengali fieldwork prompts; a
+  speaker adds the Mog in the app and a moderator approves it. No Mog was invented for them.
 - **No audio is bundled.** The IIT Guwahati recordings have no stated licence; entries link
   to that database instead. Contributors can record audio in the app.
-- **Contributions stay on the device** until exported as a JSON file and imported by a
-  moderator. There is no server yet.
+- **Contributions stay on the device** until exported and imported by a moderator, unless
+  you run the contribution server (below). Recordings always travel by export for now.
 
 ## Sources
 

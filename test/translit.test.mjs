@@ -71,3 +71,16 @@ test('aspirated onsets are not split into final + h', () => {
   assert.deepEqual(s, ['a', 'kha']);
   assert.deepEqual(parseWord('apho').map((x) => x.onset), ['', 'ph']);
 });
+
+test('phrasebook data is consistent', () => {
+  const cats = new Set(lexicon.categories.map((c) => c.id));
+  assert.ok(cats.size >= 15, 'at least 15 categories');
+  const ids = new Set();
+  for (const q of lexicon.prompts) {
+    assert.ok(cats.has(q.category), `unknown category ${q.category}`);
+    assert.ok(q.en && q.bn, `prompt ${q.id} needs English and Bengali`);
+    assert.ok(!ids.has(q.id), `duplicate id ${q.id}`); ids.add(q.id);
+  }
+  for (const e of lexicon.entries) for (const d of e.domains) assert.ok(cats.has(d), `${e.mog} uses unknown category ${d}`);
+  for (const c of cats) assert.ok(lexicon.prompts.some((q) => q.category === c), `category ${c} has no prompts`);
+});
