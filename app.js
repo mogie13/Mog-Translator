@@ -70,7 +70,7 @@ async function refreshCommunity() {
   state.community = all.filter((c) => c.status === 'approved' && c.mog).map((c) => ({
     id: 'c-' + c.id, mog: normalizeLatin(c.mog), en: c.en || '', bn: c.bn || '', pos: c.pos || '',
     domains: c.category ? [c.category] : [], source: 'community', note: c.note || '', audio: c.audio || null,
-    speaker: c.speaker || '', kind: c.kind,
+    speaker: c.speaker || '', kind: c.kind, target: c.target || '',
   }));
   // words reviewed and published on the contribution server (cached for offline use)
   if (online()) {
@@ -335,25 +335,46 @@ views.entry = (id) => {
   $('#rec').onclick = prefill('audio'); $('#fix').onclick = prefill('correction');
 };
 
+// Prompts still waiting for Mog: drop any whose approved community phrase exists.
+const openPrompts = () => {
+  const done = new Set(state.community.map((c) => c.target).filter(Boolean));
+  return (state.lex.prompts || []).filter((q) => !done.has(q.id));
+};
+const promptRow = (q) => `<li><div class="item"><span><span style="font-size:17px">${esc(q.en)}</span><br><span class="gloss" lang="bn">${esc(q.bn)}</span></span>
+  <a class="btn small" href="#contribute" data-q="${esc(q.id)}">Add Mog</a></div></li>`;
+
 views.phrases = (cat) => {
   const cats = state.lex.categories;
+  const inCat = (id) => ({
+    words: entries().filter((e) => (e.domains || []).includes(id)),
+    phrases: phrases().filter((p) => (p.domains || []).includes(id)),
+    open: openPrompts().filter((q) => q.category === id),
+  });
   if (!cat) {
-    view.innerHTML = `<h2>Phrasebook</h2><div class="grid2">${cats.map((c) => {
-      const n = entries().filter((e) => (e.domains || []).includes(c.id)).length + phrases().filter((p) => (p.domains || []).includes(c.id)).length;
-      return `<a class="cat" href="#phrases-${c.id}"><b>${esc(c.en)}</b><span>${esc(c.bn)} · ${n} item${n === 1 ? '' : 's'}</span></a>`;
-    }).join('')}</div>
-    <p class="note" style="margin-top:14px">There are no checked Mog phrases in any source we found yet, so each category lists its words for now. Speakers can add phrases in Contribute.</p>`;
+    view.innerHTML = `<h2>Phrasebook</h2>
+    <p class="note">${cats.length} categories. Phrases marked "waiting for Mog" are ready for a speaker to fill in.</p>
+    <div class="grid2">${cats.map((c) => {
+      const n = inCat(c.id);
+      const have = n.words.length + n.phrases.length;
+      return `<a class="cat" href="#phrases-${c.id}"><b>${esc(c.en)}</b><span lang="bn">${esc(c.bn)}</span><br><span>${have} in Mog · ${n.open.length} waiting</span></a>`;
+    }).join('')}</div>`;
     return;
   }
   const c = cats.find((x) => x.id === cat) || cats[0];
-  const ps = phrases().filter((p) => (p.domains || []).includes(c.id));
-  const ws = entries().filter((e) => (e.domains || []).includes(c.id));
-  view.innerHTML = `<p><a href="#phrases">← Phrasebook</a></p><h2>${esc(c.en)} <span class="gloss">${esc(c.bn)}</span></h2>
-  <h3>Phrases</h3>
-  ${ps.length ? '<ul class="list">' + ps.map(entryRow).join('') + '</ul>' : `<div class="empty">No checked phrases yet.<br><a class="btn primary" style="margin-top:10px;display:inline-block;text-decoration:none" href="#contribute" id="addp">Add a ${esc(c.en.toLowerCase())} phrase</a></div>`}
-  <h3>Words</h3>
-  ${ws.length ? '<ul class="list">' + ws.map(entryRow).join('') + '</ul>' : '<p class="empty">No words in this category yet.</p>'}`;
-  const addp = $('#addp'); if (addp) addp.onclick = () => store.set('prefill', { kind: 'phrase', category: c.id });
+  const n = inCat(c.id);
+  view.innerHTML = `<p><a href="#phrases">← Phrasebook</a></p><h2>${esc(c.en)} <span class="gloss" lang="bn">${esc(c.bn)}</span></h2>
+  ${n.phrases.length ? '<h3>Phrases</h3><ul class="list">' + n.phrases.map(entryRow).join('') + '</ul>' : ''}
+  <h3>Words in Mog</h3>
+  ${n.words.length ? '<ul class="list">' + n.words.map(entryRow).join('') + '</ul>' : '<p class="empty">No Mog words in this category yet.</p>'}
+  <h3>Waiting for Mog (${n.open.length})</h3>
+  <p class="note">Know how to say one of these in Mog? Tap Add Mog to record it. A moderator checks it before it appears above.</p>
+  ${n.open.length ? '<ul class="list">' + n.open.map(promptRow).join('') + '</ul>' : '<p class="empty">Every prompt here has a Mog answer.</p>'}
+  <p style="margin-top:14px"><a class="btn" href="#contribute" id="addp">Add another ${esc(c.en.toLowerCase())} phrase</a></p>`;
+  $('#addp').onclick = () => store.set('prefill', { kind: 'phrase', category: c.id });
+  view.querySelectorAll('[data-q]').forEach((a) => (a.onclick = () => {
+    const q = state.lex.prompts.find((x) => x.id === a.dataset.q);
+    store.set('prefill', { kind: 'phrase', category: q.category, en: q.en, bn: q.bn, target: q.id });
+  }));
 };
 
 views.saved = () => {
